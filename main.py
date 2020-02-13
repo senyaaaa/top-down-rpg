@@ -2,6 +2,7 @@ import random
 from pygame import draw
 import pygame
 from pygame import sprite
+import random
 from framework.application import Application, Input
 from framework.loader import Loader
 from framework.renderer import Renderer, Entity
@@ -23,8 +24,8 @@ class Player(Entity):
 
 
 class Tree(Entity):
-    def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("tree3.png"), (100, 400)), pygame.Vector2(x, y - 350))
+    def __init__(self, tree, x, y):
+        super().__init__(pygame.transform.scale(Loader.get_image("data/trees/" + tree), (100, 400)), pygame.Vector2(x, y - 350))
 
 
 class House(Entity):
@@ -37,18 +38,10 @@ class Ground(Entity):
         super().__init__(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), pygame.Vector2(x, y))
 
 
-class Floor(Entity):
-    def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/floor2.png"), (500, 411)), pygame.Vector2(x, y))
+class Interior(Entity):
+    def __init__(self, obj, size, x, y):
+        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/" + obj), size), pygame.Vector2(x, y))
 
-
-class Chest(Entity):
-    def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/chest.png"), (50, 50)), pygame.Vector2(x, y))
-
-class Bed(Entity):
-    def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/bed.png"), (100, 160)), pygame.Vector2(x, y))
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
 # []
@@ -142,7 +135,7 @@ class GameState(State):
 
         for i in self.coords[1]:
             x, y = i[0], i[1]
-            self.entities.append(Tree(x, y))
+            self.entities.append(Tree("tree" + str(random.randint(1, 3)) + ".png", x, y))
 
     def handle_event(self, event) -> Transition:
         if event.type == pygame.KEYUP:
@@ -170,7 +163,7 @@ class GameState(State):
         Renderer.cameraTranslation = self.camera_pos + (0, 100)
         x, y = coords[0] - self.camera_pos[0] - 175, coords[1] - self.camera_pos[1] - 300
         Renderer.clear_screen((0, 0, 0))
-        Renderer.submit(Floor(x, y))
+        Renderer.submit(Interior("floor.png", (500, 411), x, y))
         with open('room_1.csv', newline='') as csvfile:
             m = Map()
             self.interior = m.drawing(csvfile, 50)
@@ -180,11 +173,11 @@ class GameState(State):
                 if i == 1:
                     pf = Platform(a, b, 'chest')
                     self.platforms.append(pf)
-                    self.furniture.append(Chest(a, b))
+                    self.furniture.append(Interior("chest.png", (50, 50), a, b))
                 elif i == 2:
                     pf = Platform(a, b, 'bed')
                     self.platforms.append(pf)
-                    self.furniture.append(Bed(a, b))
+                    self.furniture.append(Interior("bed.png", (100, 160), a, b))
         for f in self.furniture:
             Renderer.submit(f)
         Renderer.submit(self.player)
