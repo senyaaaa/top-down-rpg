@@ -28,9 +28,9 @@ class Tree(Entity):
         super().__init__(pygame.transform.scale(Loader.get_image("data/trees/" + tree), (100, 400)), pygame.Vector2(x, y - 350))
 
 
-class House(Entity):
-    def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/house.png"), (500, 500)), pygame.Vector2(x, y))
+class Houses(Entity):
+    def __init__(self, house, x, y):
+        super().__init__(pygame.transform.scale(Loader.get_image("data/houses/" + house + ".png"), (500, 500)), pygame.Vector2(x, y))
 
 
 class Ground(Entity):
@@ -40,7 +40,7 @@ class Ground(Entity):
 
 class Interior(Entity):
     def __init__(self, obj, size, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/" + obj), size), pygame.Vector2(x, y))
+        super().__init__(pygame.transform.scale(Loader.get_image("data/houses/inn/" + obj), size), pygame.Vector2(x, y))
 
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
@@ -92,7 +92,7 @@ class PauseState(State):
 class GameState(State):
     def do_some_cut(self, n, count):
         rects = []
-        sheetImage = pygame.image.load('data/main_hero/hero.png').convert_alpha()
+        sheetImage = pygame.image.load("data/main_hero/hero.png").convert_alpha()
         spriteWidth = sheetImage.get_width() // 4
         spriteHeight = sheetImage.get_height() // 4
 
@@ -116,26 +116,27 @@ class GameState(State):
         self.player.image = pygame.transform.scale(returnedSurfaces[n][count // 10], (100, 100))
 
     def on_start(self):
-        with open('map.csv', newline='') as csvfile:
+        with open("map.csv", newline='') as csvfile:
             m = Map()
             self.coords = m.drawing(csvfile, 100)
         self.in_home = False
         self.on_facade = False
         self.count = 0
-
+        self.types_of_houses = {2: "inn", 3: "house"}
+        self.types_of_rooms = {}
         self.entities = []
         self.building = []
         self.player = Player()
         self.ground = Ground(0, 0)
         self.pos = pygame.Vector2()
         self.player.pos = (1000, 500)
-        for i in self.coords[2]:
-            x, y = i[0], i[1]
-            self.building.append(House(x, y))
-
-        for i in self.coords[1]:
-            x, y = i[0], i[1]
-            self.entities.append(Tree("tree" + str(random.randint(1, 3)) + ".png", x, y))
+        for i in self.coords:
+            for j in self.coords[i]:
+                x, y = j[0], j[1]
+                if i == 1:
+                    self.entities.append(Tree("tree" + str(random.randint(1, 3)) + ".png", x, y))
+                else:
+                    self.building.append(Houses(self.types_of_houses[i], x, y))
 
     def handle_event(self, event) -> Transition:
         if event.type == pygame.KEYUP:
@@ -146,6 +147,7 @@ class GameState(State):
                     if not self.in_home:
                         self.camera_pos = Renderer.cameraTranslation
                         self.in_home = True
+                        self.premises = self.types_of_rooms[self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation)]
                     else:
                         self.in_home = False
             if event.key == pygame.K_ESCAPE:
@@ -158,24 +160,24 @@ class GameState(State):
     def slerp(self, p0, p1, t):
         return p0 + (p1 - p0) * t
 
-    def room(self, coords, room):
+    def room(self, coords, premises):
         self.platforms = []
         Renderer.cameraTranslation = self.camera_pos + (0, 100)
         x, y = coords[0] - self.camera_pos[0] - 175, coords[1] - self.camera_pos[1] - 300
         Renderer.clear_screen((0, 0, 0))
         Renderer.submit(Interior("floor.png", (500, 411), x, y))
-        with open('room_1.csv', newline='') as csvfile:
+        with open(self.types_of_houses[premises] + ".csv", newline='') as csvfile:
             m = Map()
             self.interior = m.drawing(csvfile, 50)
         for i in sorted(self.interior, reverse=True):
             for j in self.interior[i]:
                 a, b = x + j[0], y + j[1]
                 if i == 1:
-                    pf = Platform(a, b, 'chest')
+                    pf = Platform(a, b, "chest")
                     self.platforms.append(pf)
                     self.furniture.append(Interior("chest.png", (50, 50), a, b))
                 elif i == 2:
-                    pf = Platform(a, b, 'bed')
+                    pf = Platform(a, b, "bed")
                     self.platforms.append(pf)
                     self.furniture.append(Interior("bed.png", (100, 160), a, b))
         for f in self.furniture:
@@ -220,10 +222,10 @@ class GameState(State):
                         pf = Platform(x, y, i)
                         self.platforms.append(pf)
                         self.posit.append(((x, y), i))
-                if i == 2:
+                if i in self.types_of_houses:
                     x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
                     if not self.in_home:
-                        pf = Platform(x, y, i)
+                        pf = Platform(x, y, "house")
                         self.platforms.append(pf)
                         f = Facade(x, y)
                         self.facade.append(f)
@@ -239,6 +241,7 @@ class GameState(State):
                         self.posit.append(((x + 500, y + 180), 'wool_ver'))
                     d = Door(x + 175, y + 480)
                     self.doors.append(d)
+                    self.types_of_rooms[d] = i
                     self.posit.append(((x + 175, y + 480), 'door'))
 
     def update(self) -> Transition:
@@ -274,7 +277,7 @@ class GameState(State):
         if self.pos.x > 1410:
             Renderer.cameraTranslation[0] = -920
         if self.in_home:
-            self.room(self.coord_of_house, 'inn')
+            self.room(self.coord_of_house, self.premises)
         else:
             if not self.on_facade:
                 Renderer.submit(self.ground)
@@ -292,7 +295,7 @@ class GameState(State):
                     Renderer.submit(ent)
 
         Renderer.present()
-        # Renderer.check(self.posit)
+        Renderer.check(self.posit)
 
         return Trans.Pass
 

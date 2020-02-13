@@ -14,8 +14,8 @@ class Map:
             self.data.append([int(i) for i in row])
         self.world_width = len(self.data)
         self.world_height = len(self.data[0])
-        self.d[1] = []
-        self.d[2] = []
+        for i in range(4):
+            self.d[i] = []
         for i in range(self.world_width):
             for j in range(self.world_height):
                 if self.data[i][j] != 0:
@@ -27,7 +27,7 @@ class Platform:
     def __init__(self, x, y, obj):
         if obj == 1:
             self.rect = Rect(x + 10, y + 10, 80, 40)
-        if obj == 2:
+        if obj == 'house':
             self.rect = Rect(x + 15, y + 100, 475, 285)
         if obj == 'chest':
             self.rect = Rect(x, y, 50, 10)
