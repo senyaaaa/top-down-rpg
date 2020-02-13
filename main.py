@@ -39,16 +39,16 @@ class Ground(Entity):
 
 class Floor(Entity):
     def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/floor2.png"), (500, 410)), pygame.Vector2(x, y))
+        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/floor2.png"), (500, 411)), pygame.Vector2(x, y))
 
 
 class Chest(Entity):
     def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/chest.png"), (100, 100)), pygame.Vector2(x, y))
+        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/chest.png"), (50, 50)), pygame.Vector2(x, y))
 
 class Bed(Entity):
     def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/bed.png"), (100, 200)), pygame.Vector2(x, y))
+        super().__init__(pygame.transform.scale(Loader.get_image("data/house/inn/bed.png"), (100, 160)), pygame.Vector2(x, y))
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
 # []
@@ -137,11 +137,11 @@ class GameState(State):
         self.pos = pygame.Vector2()
         self.player.pos = (1000, 500)
         for i in self.coords[2]:
-            y, x = i[0], i[1]
+            x, y = i[0], i[1]
             self.building.append(House(x, y))
 
         for i in self.coords[1]:
-            y, x = i[0], i[1]
+            x, y = i[0], i[1]
             self.entities.append(Tree(x, y))
 
     def handle_event(self, event) -> Transition:
@@ -166,25 +166,27 @@ class GameState(State):
         return p0 + (p1 - p0) * t
 
     def room(self, coords, room):
-        check = []
+        self.platforms = []
         Renderer.cameraTranslation = self.camera_pos + (0, 100)
         x, y = coords[0] - self.camera_pos[0] - 175, coords[1] - self.camera_pos[1] - 300
         Renderer.clear_screen((0, 0, 0))
         Renderer.submit(Floor(x, y))
         with open('room_1.csv', newline='') as csvfile:
             m = Map()
-            self.chests = m.drawing(csvfile, 20)
-        for i in self.chests[1]:
-            a, b = x + i[1], y + i[0]
-            print(a, b)
-            self.furniture.append(Chest(a, b))
-        for i in self.chests[2]:
-            a, b = y + i[0], x + i[1]
-            self.furniture.append(Bed(a, b))
-            check.append((a, b), 'room')
+            self.interior = m.drawing(csvfile, 50)
+        for i in sorted(self.interior, reverse=True):
+            for j in self.interior[i]:
+                a, b = x + j[0], y + j[1]
+                if i == 1:
+                    pf = Platform(a, b, 'chest')
+                    self.platforms.append(pf)
+                    self.furniture.append(Chest(a, b))
+                elif i == 2:
+                    pf = Platform(a, b, 'bed')
+                    self.platforms.append(pf)
+                    self.furniture.append(Bed(a, b))
         for f in self.furniture:
             Renderer.submit(f)
-        Renderer.check(check)
         Renderer.submit(self.player)
 
     def move(self):
@@ -216,25 +218,17 @@ class GameState(State):
         if self.count == 40:
             self.count = 0
 
-    def update(self) -> Transition:
-        self.furniture = []
-        self.platforms = []
-        self.doors = []
-        self.platforms = []
-        self.facade = []
-        self.posit = []
-
-        self.do_some_cut(3, 15)
+    def create_map(self):
         for i in self.coords:
             for j in self.coords[i]:
                 if i == 1:
                     if not self.in_home:
-                        y, x = j[0] + Renderer.cameraTranslation[1], j[1] + Renderer.cameraTranslation[0]
+                        x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
                         pf = Platform(x, y, i)
                         self.platforms.append(pf)
                         self.posit.append(((x, y), i))
                 if i == 2:
-                    y, x = j[0] + Renderer.cameraTranslation[1], j[1] + Renderer.cameraTranslation[0]
+                    x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
                     if not self.in_home:
                         pf = Platform(x, y, i)
                         self.platforms.append(pf)
@@ -254,14 +248,16 @@ class GameState(State):
                     self.doors.append(d)
                     self.posit.append(((x + 175, y + 480), 'door'))
 
-        # if Input.is_key_held(pygame.K_e):
-        #     if self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation):
-        #         self.coord_of_house = self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation).rect.topleft
-        #         if not self.in_home:
-        #             self.camera_pos = Renderer.cameraTranslation
-        #             self.in_home = True
-        #         else:
-        #             self.in_home = False
+    def update(self) -> Transition:
+        self.furniture = []
+        if not self.in_home:
+            self.platforms = []
+        self.doors = []
+        self.facade = []
+        self.posit = []
+        self.do_some_cut(3, 15)
+
+        self.create_map()
 
         self.move()
         if self.player.check(self.facade, (self.player.x, self.player.y) + Renderer.cameraTranslation):

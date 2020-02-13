@@ -41,7 +41,7 @@ class Application:
         clock = pygame.time.Clock()
         while self.stateMachine.running:
             clock.tick(60)
-            # print(clock.get_fps())
+            print(clock.get_fps())
             Renderer.start_frame()
             for event in pygame.event.get():
                 self.stateMachine.handle_event(event)

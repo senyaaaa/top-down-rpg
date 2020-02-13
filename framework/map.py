@@ -19,8 +19,7 @@ class Map:
         for i in range(self.world_width):
             for j in range(self.world_height):
                 if self.data[i][j] != 0:
-                    self.d[self.data[i][j]].append((i * n, j * n))
-        print(self.d)
+                    self.d[self.data[i][j]].append((j * n, i * n))
         return self.d
 
 
@@ -30,6 +29,10 @@ class Platform:
             self.rect = Rect(x + 10, y + 10, 80, 40)
         if obj == 2:
             self.rect = Rect(x + 15, y + 100, 475, 285)
+        if obj == 'chest':
+            self.rect = Rect(x, y, 50, 10)
+        if obj == 'bed':
+            self.rect = Rect(x, y, 50, 10)
 
 class Facade:
     def __init__(self, x, y):
