@@ -42,6 +42,11 @@ class Interior(Entity):
     def __init__(self, obj, size, x, y):
         super().__init__(pygame.transform.scale(Loader.get_image("data/houses/inn/" + obj), size), pygame.Vector2(x, y))
 
+
+class NPC(Entity):
+    def __init__(self, name, x, y):
+        super().__init__(pygame.transform.scale(Loader.get_image("data/npc/" + name), (100, 100)), pygame.Vector2(x, y))
+
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
 # []
