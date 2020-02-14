@@ -30,9 +30,9 @@ class Platform:
         if obj == 'house':
             self.rect = Rect(x + 15, y + 100, 475, 285)
         if obj == 'chest':
-            self.rect = Rect(x, y, 50, 10)
+            self.rect = Rect(x + 20, y + 10, 10, 5)
         if obj == 'bed':
-            self.rect = Rect(x, y, 50, 10)
+            self.rect = Rect(x, y + 10, 100, 20)
 
 class Facade:
     def __init__(self, x, y):

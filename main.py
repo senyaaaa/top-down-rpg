@@ -124,8 +124,10 @@ class GameState(State):
         self.count = 0
         self.types_of_houses = {2: "inn", 3: "house"}
         self.types_of_rooms = {}
+        self.types_of_furniture = {1: "chest", 2: "bed"}
         self.entities = []
         self.building = []
+        self.furniture = []
         self.player = Player()
         self.ground = Ground(0, 0)
         self.pos = pygame.Vector2()
@@ -162,23 +164,17 @@ class GameState(State):
 
     def room(self, coords, premises):
         self.platforms = []
+        self.furniture = []
         Renderer.cameraTranslation = self.camera_pos + (0, 100)
         x, y = coords[0] - self.camera_pos[0] - 175, coords[1] - self.camera_pos[1] - 300
         Renderer.clear_screen((0, 0, 0))
         Renderer.submit(Interior("floor.png", (500, 411), x, y))
-        with open(self.types_of_houses[premises] + ".csv", newline='') as csvfile:
-            m = Map()
-            self.interior = m.drawing(csvfile, 50)
         for i in sorted(self.interior, reverse=True):
             for j in self.interior[i]:
                 a, b = x + j[0], y + j[1]
                 if i == 1:
-                    pf = Platform(a, b, "chest")
-                    self.platforms.append(pf)
                     self.furniture.append(Interior("chest.png", (50, 50), a, b))
                 elif i == 2:
-                    pf = Platform(a, b, "bed")
-                    self.platforms.append(pf)
                     self.furniture.append(Interior("bed.png", (100, 160), a, b))
         for f in self.furniture:
             Renderer.submit(f)
@@ -216,46 +212,58 @@ class GameState(State):
     def create_map(self):
         for i in self.coords:
             for j in self.coords[i]:
+                x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
                 if i == 1:
-                    if not self.in_home:
-                        x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
-                        pf = Platform(x, y, i)
-                        self.platforms.append(pf)
-                        self.posit.append(((x, y), i))
+                    pf = Platform(x, y, i)
+                    self.platforms.append(pf)
+                    self.posit.append(((x, y), i))
                 if i in self.types_of_houses:
-                    x, y = j[0] + Renderer.cameraTranslation[0], j[1] + Renderer.cameraTranslation[1]
-                    if not self.in_home:
-                        pf = Platform(x, y, "house")
-                        self.platforms.append(pf)
-                        f = Facade(x, y)
-                        self.facade.append(f)
-                        self.posit.append(((x, y), i))
-                    else:
-                        self.platforms.append(pygame.Rect(x, y + 170, 500, 10))
-                        self.platforms.append(pygame.Rect(x, y + 590, 500, 10))
-                        self.platforms.append(pygame.Rect(x - 10, y + 180, 10, 500))
-                        self.platforms.append(pygame.Rect(x + 500, y + 180, 10, 500))
-                        self.posit.append(((x, y + 170), 'wool_hor'))
-                        self.posit.append(((x, y + 590), 'wool_hor'))
-                        self.posit.append(((x - 10, y + 180), 'wool_ver'))
-                        self.posit.append(((x + 500, y + 180), 'wool_ver'))
+                    pf = Platform(x, y, "house")
+                    self.platforms.append(pf)
+                    f = Facade(x, y)
+                    self.facade.append(f)
+                    self.posit.append(((x, y), i))
+
                     d = Door(x + 175, y + 480)
                     self.doors.append(d)
                     self.types_of_rooms[d] = i
                     self.posit.append(((x + 175, y + 480), 'door'))
 
+    def create_room(self, coord, premises):
+        x, y = coord[0] - 175, coord[1] - 210
+        with open(self.types_of_houses[premises] + ".csv", newline='') as csvfile:
+            m = Map()
+            self.interior = m.drawing(csvfile, 50)
+            for i in sorted(self.interior, reverse=True):
+                for j in self.interior[i]:
+                    a, b = x + j[0], y + j[1]
+                    pf = Platform(a, b, self.types_of_furniture[i])
+                    self.platforms.append(pf)
+                    self.posit.append(((a, b), self.types_of_furniture[i]))
+        self.platforms.append(pygame.Rect(x, y, 500, 10))
+        self.platforms.append(pygame.Rect(x, y + 420, 500, 10))
+        self.platforms.append(pygame.Rect(x - 10, y + 10, 10, 500))
+        self.platforms.append(pygame.Rect(x + 500, y + 10, 10, 500))
+        self.posit.append(((x, y), 'wool_hor'))
+        self.posit.append(((x, y + 420), 'wool_hor'))
+        self.posit.append(((x - 10, y + 10), 'wool_ver'))
+        self.posit.append(((x + 500, y + 10), 'wool_ver'))
+        d = Door(x + 175, y + 360)
+        self.doors.append(d)
+        self.posit.append(((x + 175, y + 360), 'door'))
+
     def update(self) -> Transition:
-        self.furniture = []
-        if not self.in_home:
-            self.platforms = []
+        self.platforms = []
         self.doors = []
         self.facade = []
         self.posit = []
         self.do_some_cut(3, 15)
-
-        self.create_map()
-
+        if not self.in_home:
+            self.create_map()
+        else:
+            self.create_room(self.coord_of_house, self.premises)
         self.move()
+
         if self.player.check(self.facade, (self.player.x, self.player.y) + Renderer.cameraTranslation):
             self.on_facade = True
         else:
