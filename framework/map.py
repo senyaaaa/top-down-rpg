@@ -14,7 +14,7 @@ class Map:
             self.data.append([int(i) for i in row])
         self.world_width = len(self.data)
         self.world_height = len(self.data[0])
-        for i in range(4):
+        for i in range(5):
             self.d[i] = []
         for i in range(self.world_width):
             for j in range(self.world_height):
@@ -27,6 +27,8 @@ class Platform:
     def __init__(self, x, y, obj):
         if obj == 1:
             self.rect = Rect(x + 10, y + 10, 80, 40)
+        if obj == 4:
+            self.rect = Rect(x + 10, y + 80, 50, 20)
         if obj == 'house':
             self.rect = Rect(x + 15, y + 100, 475, 285)
         if obj == 'chest':
@@ -42,3 +44,8 @@ class Facade:
 class Door:
     def __init__(self, x, y):
         self.rect = Rect(x, y, 150, 20)
+
+
+class Cutting:
+    def __init__(self, x, y):
+        self.rect = Rect(x + 10, y - 30, 80, 40)

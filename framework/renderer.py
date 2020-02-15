@@ -89,6 +89,8 @@ class Renderer:
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0] + 10, i[0][1] + 10), (80, 40)), 1)
             elif i[1] == 2 or i[1] == 3:
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0], i[0][1] + 100), (500, 285)), 1)
+            elif i[1] == 4:
+                draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0] + 10, i[0][1] + 80), (50, 20)), 1)
             elif i[1] == 'door':
                 draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0], i[0][1]), (150, 20)), 1)
             elif i[1] == 'wool_hor':
@@ -101,3 +103,5 @@ class Renderer:
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0] + 20, i[0][1] + 10), (10, 5)), 1)
             elif i[1] == 'bed':
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0], i[0][1] + 10), (100, 20)), 1)
+            elif i[1] == 'cut':
+                draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0] + 10, i[0][1] - 30), (80, 40)), 1)
