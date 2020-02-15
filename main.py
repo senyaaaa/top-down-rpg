@@ -1,7 +1,4 @@
-import random
-from pygame import draw
 import pygame
-from pygame import sprite
 import random
 from framework.application import Application, Input
 from framework.loader import Loader
