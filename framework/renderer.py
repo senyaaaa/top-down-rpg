@@ -104,4 +104,4 @@ class Renderer:
             elif i[1] == 'bed':
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0], i[0][1] + 10), (100, 20)), 1)
             elif i[1] == 'cut':
-                draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0] + 10, i[0][1] - 30), (80, 40)), 1)
+                draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0] + 30, i[0][1] - 30), (40, 40)), 1)

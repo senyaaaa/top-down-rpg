@@ -97,11 +97,11 @@ class PauseState(State):
 
 
 class GameState(State):
-    def do_some_cut(self, n, picture):
+    def do_some_cut(self, c, r, picture):
         rects = []
         sheetImage = pygame.image.load(picture).convert_alpha()
-        spriteWidth = sheetImage.get_width() // n
-        spriteHeight = sheetImage.get_height() // n
+        spriteWidth = sheetImage.get_width() // c
+        spriteHeight = sheetImage.get_height() // r
 
         for y in range(0, sheetImage.get_height(), spriteHeight):
             if y + spriteHeight > sheetImage.get_height():
@@ -128,10 +128,14 @@ class GameState(State):
             self.coords = m.drawing(csvfile, 100)
         self.in_home = False
         self.on_facade = False
+        self.tree_fall = False
+        self.anim = 0
         self.count = 0
+        self.broken = 0
         self.types_of_houses = {2: "inn", 3: "house"}
         self.types_of_rooms = {}
         self.types_of_furniture = {1: "chest", 2: "bed"}
+        self.trees = {}
         self.entities = []
         self.building = []
         self.furniture = []
@@ -145,7 +149,11 @@ class GameState(State):
             for j in self.coords[i]:
                 x, y = j[0], j[1]
                 if i == 1:
-                    self.entities.append(Tree("tree" + str(random.randint(1, 3)) + ".png", x, y))
+                    n = str(random.randint(1, 3))
+                    tree = Tree("tree" + n + ".png", x, y)
+                    tree.image = pygame.transform.scale(self.do_some_cut(4, 1, "data/trees/tree" + n + ".png")[0][0], (100, 400))
+                    self.entities.append(tree)
+                    self.trees[(x + 30, y - 30)] = tree, 100, n
                 elif i == 4:
                     self.entities.append(NPC("woodcutter.png", x, y))
                 else:
@@ -194,43 +202,55 @@ class GameState(State):
 
     def move(self):
         if Input.is_key_held(pygame.K_SPACE):
-            if self.player.check(self.cutting, (self.player.x, self.player.y) + Renderer.cameraTranslation):
+            if self.player.check(self.cutting, (self.player.pos) + Renderer.cameraTranslation):
+                coord = self.player.check(self.cutting, (
+                    self.player.pos) + Renderer.cameraTranslation).rect.topleft - Renderer.cameraTranslation
+                coord = (round(coord[0], -1), round(coord[1], -1))
                 if self.player.x + Renderer.cameraTranslation[0] >= self.player.check(self.cutting, (self.player.x, self.player.y) + Renderer.cameraTranslation).rect.center[0] - 50:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, "data/tool/ax.png")[1][self.count // 20], (60, 60))
-                    self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[0][1], (100, 100))
+                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[1][self.count // 20], (60, 60))
+                    self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][1], (100, 100))
                     self.tool.pos = self.player.pos[0], self.player.pos[1] + 65 - (self.count // 20) * 40
                 else:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, "data/tool/ax.png")[0][self.count // 20], (60, 60))
-                    self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[1][1], (100, 100))
+                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][self.count // 20], (60, 60))
+                    self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][1], (100, 100))
                     self.tool.pos = self.player.pos[0] + 35, self.player.pos[1] + 25 + (self.count // 20) * 50
+                if self.count == 39 and self.trees[coord][1] != 20:
+                    n = self.trees[coord][2]
+                    self.trees[coord] = (self.trees[coord][0], self.trees[coord][1] - 20, self.trees[coord][2])
+                    self.trees[coord][0].image = pygame.transform.scale(self.do_some_cut(4, 1, "data/trees/tree" + n + ".png")[0][::-1][self.trees[coord][1] // 25 - 1], (100, 400))
+                    if self.trees[coord][1] == 20:
+                        print(self.trees[coord][2])
+                        self.tree_fall = self.trees[coord][0], int(self.trees[coord][2]) - 1
         else:
             if Input.is_key_held(pygame.K_a):
                 self.player.x -= 5
                 if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
                         self.player.x < 0:
                     self.player.x += 5
-                self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[0][self.count // 10], (100, 100))
+                self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_d):
                 self.player.x += 5
                 if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
                         self.player.x > 1900:
                     self.player.x -= 5
-                self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[1][self.count // 10], (100, 100))
+                self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_w):
                 self.player.y -= 5
                 if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
                         self.player.y < 0:
                     self.player.y += 5
-                self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[2][self.count // 10], (100, 100))
+                self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[2][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_s):
                 self.player.y += 5
                 if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
                         self.player.y > 1900:
                     self.player.y -= 5
-                self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[3][self.count // 10], (100, 100))
+                self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][self.count // 10], (100, 100))
+
         self.count += 1
         if self.count == 40:
             self.count = 0
+
 
     def create_map(self):
         for i in self.coords:
@@ -285,8 +305,18 @@ class GameState(State):
         self.doors = []
         self.facade = []
         self.posit = []
-        self.player.image = pygame.transform.scale(self.do_some_cut(4, "data/main_hero/hero.png")[3][1], (100, 100))
+        self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][1], (100, 100))
         self.tool.pos = (-420, 420)
+        if self.tree_fall:
+            self.anim += 1
+            print(self.tree_fall)
+            self.tree_fall[0].image = pygame.transform.scale(
+                            self.do_some_cut(5, 3, "data/trees/falling_tree.png")[self.tree_fall[1]][self.anim // 10], (480, 400))
+            if self.anim == 49:
+                self.tree_fall[0].image = pygame.transform.scale(Loader.get_image("data/trees/stump.png"), (100, 400))
+                self.anim = 0
+                self.tree_fall = False
+
         if not self.in_home:
             self.create_map()
         else:
@@ -319,7 +349,6 @@ class GameState(State):
             if not self.on_facade:
                 Renderer.submit(self.ground)
                 Renderer.submit(self.player)
-                Renderer.submit(self.tool)
                 for b in self.building:
                     Renderer.submit(b)
                 for ent in self.entities:
@@ -329,12 +358,11 @@ class GameState(State):
                 for b in self.building:
                     Renderer.submit(b)
                 Renderer.submit(self.player)
-                Renderer.submit(self.tool)
                 for ent in self.entities:
                     Renderer.submit(ent)
-
+        Renderer.submit(self.tool)
         Renderer.present()
-        Renderer.check(self.posit)
+        # Renderer.check(self.posit)
 
         return Trans.Pass
 

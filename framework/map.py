@@ -48,4 +48,4 @@ class Door:
 
 class Cutting:
     def __init__(self, x, y):
-        self.rect = Rect(x + 10, y - 30, 80, 40)
+        self.rect = Rect(x + 30, y - 30, 40, 40)
