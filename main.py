@@ -5,7 +5,7 @@ from framework.loader import Loader
 from framework.renderer import Renderer, Entity
 from framework.states import State, Trans, Transition
 from framework.window import Window
-from framework.map import Map, Platform, Facade, Door, Cutting
+from framework.map import Map, Platform, Facade, Door, Cutting, Cells
 
 
 class Player(Entity):
@@ -47,7 +47,28 @@ class NPC(Entity):
 
 class Tool(Entity):
     def __init__(self, tool):
-        super().__init__(pygame.transform.scale(Loader.get_image("data/tool/" + tool), (50, 50)), pygame.Vector2())
+        super().__init__(pygame.transform.scale(Loader.get_image("data/tool/" + tool), (50, 60)), pygame.Vector2())
+
+
+class Inventory(Entity):
+    def __init__(self):
+        super().__init__(Loader.get_image("data/inventory.png"), pygame.Vector2(55, 92) - Renderer.cameraTranslation)
+        self.inventory = {(100, 200): 0, (170, 200): 0, (240, 200): 0, (310, 200): 0,
+                          (100, 295): 0, (170, 295): 0, (240, 295): 0, (310, 295): 0,
+                          (100, 390): 0, (170, 390): 0, (240, 390): 0, (310, 390): 0}
+        self.cells = [Cells(i) for i in self.inventory]
+
+
+
+    def add_object(self, obj):
+        self.inventory.append(obj)
+
+    def del_object(self, obj):
+        if obj in self.inventory:
+            self.inventory.remove(obj)
+
+    def return_inventory(self):
+        return self.inventory
 
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
@@ -129,6 +150,7 @@ class GameState(State):
         self.in_home = False
         self.on_facade = False
         self.tree_fall = False
+        self.inventory_is_open = False
         self.anim = 0
         self.count = 0
         self.broken = 0
@@ -140,6 +162,9 @@ class GameState(State):
         self.building = []
         self.furniture = []
         self.player = Player()
+        self.inventory = Inventory()
+        self.ax_icon = Tool("ax.png")
+        self.ax_icon.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][0], (60, 70))
         self.tool = Tool("ax.png")
         self.ground = Ground(0, 0)
         self.pos = pygame.Vector2()
@@ -171,6 +196,11 @@ class GameState(State):
                         self.premises = self.types_of_rooms[self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation)]
                     else:
                         self.in_home = False
+            if event.key == pygame.K_TAB:
+                if not self.inventory_is_open:
+                    self.inventory_is_open = True
+                else:
+                    self.inventory_is_open = False
 
             if event.key == pygame.K_ESCAPE:
                 return Trans.Push(PauseState())
@@ -202,18 +232,18 @@ class GameState(State):
 
     def move(self):
         if Input.is_key_held(pygame.K_SPACE):
-            if self.player.check(self.cutting, (self.player.pos) + Renderer.cameraTranslation):
+            if self.player.check(self.cutting, self.player.pos + Renderer.cameraTranslation):
                 coord = self.player.check(self.cutting, (
                     self.player.pos) + Renderer.cameraTranslation).rect.topleft - Renderer.cameraTranslation
                 coord = (round(coord[0], -1), round(coord[1], -1))
                 if self.player.x + Renderer.cameraTranslation[0] >= self.player.check(self.cutting, (self.player.x, self.player.y) + Renderer.cameraTranslation).rect.center[0] - 50:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[1][self.count // 20], (60, 60))
+                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[1][self.count // 20], (60, 70))
                     self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][1], (100, 100))
-                    self.tool.pos = self.player.pos[0], self.player.pos[1] + 65 - (self.count // 20) * 40
+                    self.tool.pos = self.player.pos[0], self.player.pos[1] + 65 - (self.count // 20) * 50
                 else:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][self.count // 20], (60, 60))
+                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][self.count // 20], (60, 70))
                     self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][1], (100, 100))
-                    self.tool.pos = self.player.pos[0] + 35, self.player.pos[1] + 25 + (self.count // 20) * 50
+                    self.tool.pos = self.player.pos[0] + 35, self.player.pos[1] + 15 + (self.count // 20) * 50
                 if self.count == 39 and self.trees[coord][1] != 20:
                     n = self.trees[coord][2]
                     self.trees[coord] = (self.trees[coord][0], self.trees[coord][1] - 20, self.trees[coord][2])
@@ -224,25 +254,25 @@ class GameState(State):
         else:
             if Input.is_key_held(pygame.K_a):
                 self.player.x -= 5
-                if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
+                if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.x < 0:
                     self.player.x += 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_d):
                 self.player.x += 5
-                if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
+                if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.x > 1900:
                     self.player.x -= 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_w):
                 self.player.y -= 5
-                if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
+                if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.y < 0:
                     self.player.y += 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[2][self.count // 10], (100, 100))
             if Input.is_key_held(pygame.K_s):
                 self.player.y += 5
-                if self.player.check(self.platforms, (self.player.x, self.player.y) + Renderer.cameraTranslation) or \
+                if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.y > 1900:
                     self.player.y -= 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][self.count // 10], (100, 100))
@@ -300,6 +330,7 @@ class GameState(State):
         self.posit.append(((x + 175, y + 360), 'door'))
 
     def update(self) -> Transition:
+
         self.platforms = []
         self.cutting = []
         self.doors = []
@@ -309,7 +340,6 @@ class GameState(State):
         self.tool.pos = (-420, 420)
         if self.tree_fall:
             self.anim += 1
-            print(self.tree_fall)
             self.tree_fall[0].image = pygame.transform.scale(
                             self.do_some_cut(5, 3, "data/trees/falling_tree.png")[self.tree_fall[1]][self.anim // 10], (480, 400))
             if self.anim == 49:
@@ -323,7 +353,7 @@ class GameState(State):
             self.create_room(self.coord_of_house, self.premises)
         self.move()
 
-        if self.player.check(self.facade, (self.player.x, self.player.y) + Renderer.cameraTranslation):
+        if self.player.check(self.facade, self.player.pos + Renderer.cameraTranslation):
             self.on_facade = True
         else:
             self.on_facade = False
@@ -343,6 +373,7 @@ class GameState(State):
             Renderer.cameraTranslation[1] = -1280
         if self.pos.x > 1410:
             Renderer.cameraTranslation[0] = -920
+
         if self.in_home:
             self.room(self.coord_of_house)
         else:
@@ -361,10 +392,24 @@ class GameState(State):
                 for ent in self.entities:
                     Renderer.submit(ent)
         Renderer.submit(self.tool)
+        if self.inventory_is_open:
+            self.inventory.pos = self.player.pos - (440, 215)
+            self.inventory.pos = (50, 92) - Renderer.cameraTranslation
+            Renderer.submit(self.inventory)
+            for i in range(12):
+                self.ax_icon.pos = list(self.inventory.inventory)[i] - Renderer.cameraTranslation
+                # self.ax_icon.pos = self.player.pos - self.inventory.inventory[i] + (-80, 280)
+                Renderer.submit(self.ax_icon)
+
+
         Renderer.present()
+
         # Renderer.check(self.posit)
 
         return Trans.Pass
+
+
+
 
 
 if __name__ == "__main__":

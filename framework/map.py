@@ -49,3 +49,8 @@ class Door:
 class Cutting:
     def __init__(self, x, y):
         self.rect = Rect(x + 30, y - 30, 40, 40)
+
+
+class Cells:
+    def __init__(self, pos):
+        self.rect = Rect(*pos, 70, 95)
