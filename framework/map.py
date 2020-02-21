@@ -35,6 +35,10 @@ class Platform:
             self.rect = Rect(x + 20, y + 10, 10, 5)
         if obj == 'bed':
             self.rect = Rect(x, y + 10, 100, 20)
+        if obj == 'chair':
+            self.rect = Rect(x + 20, y, 10, 5)
+        if obj == 'table':
+            self.rect = Rect(x + 20, y + 20, 100, 10)
 
 class Facade:
     def __init__(self, x, y):
@@ -53,4 +57,9 @@ class Cutting:
 
 class Cells:
     def __init__(self, pos):
-        self.rect = Rect(*pos, 70, 95)
+        self.rect = Rect(pos[0], pos[1], 70, 95)
+
+
+class Talking_area:
+    def __init__(self, x, y):
+        self.rect = Rect(x, y, 175, 200)

@@ -105,3 +105,7 @@ class Renderer:
                 draw.rect(pygame.display.get_surface(), (255, 0, 0), ((i[0][0], i[0][1] + 10), (100, 20)), 1)
             elif i[1] == 'cut':
                 draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0] + 30, i[0][1] - 30), (40, 40)), 1)
+            elif i[1] == 'cell':
+                draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0], i[0][1]), (70, 95)), 1)
+            elif i[1] == 'dialog':
+                draw.rect(pygame.display.get_surface(), (255, 255, 255), ((i[0][0], i[0][1]), (175, 200)), 1)

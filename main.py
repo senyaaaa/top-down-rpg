@@ -5,7 +5,7 @@ from framework.loader import Loader
 from framework.renderer import Renderer, Entity
 from framework.states import State, Trans, Transition
 from framework.window import Window
-from framework.map import Map, Platform, Facade, Door, Cutting, Cells
+from framework.map import Map, Platform, Facade, Door, Cutting, Cells, Talking_area
 
 
 class Player(Entity):
@@ -52,30 +52,44 @@ class Tool(Entity):
 
 class Inventory(Entity):
     def __init__(self):
-        super().__init__(Loader.get_image("data/inventory.png"), pygame.Vector2(55, 92) - Renderer.cameraTranslation)
+        super().__init__(Loader.get_image("data/inventory.png"), pygame.Vector2(50, 92))
         self.inventory = {(100, 200): 0, (170, 200): 0, (240, 200): 0, (310, 200): 0,
                           (100, 295): 0, (170, 295): 0, (240, 295): 0, (310, 295): 0,
                           (100, 390): 0, (170, 390): 0, (240, 390): 0, (310, 390): 0}
-        self.cells = [Cells(i) for i in self.inventory]
-
-
 
     def add_object(self, obj):
-        self.inventory.append(obj)
+        for i in self.inventory:
+            if self.inventory[i] == 0:
+                self.inventory[i] = obj
+                return True
 
     def del_object(self, obj):
-        if obj in self.inventory:
-            self.inventory.remove(obj)
+        for i in self.inventory:
+            if self.inventory[i] == obj:
+                self.inventory[i] = 0
 
     def return_inventory(self):
         return self.inventory
+
+
+class Dialog(Entity):
+    def __init__(self):
+        super().__init__(pygame.transform.scale(Loader.get_image("data/DialogWindow/dialogwindow.png"), (800, 250)),
+                         pygame.Vector2(140, 450))
+
+class Button(Entity):
+    def __init__(self, btn):
+        super().__init__(Loader.get_image("data/DialogWindow/" + btn + "_btn.png"), pygame.Vector2(420, 69))
+        self.rect = self.image.get_rect()
+
+
 
 # [Game] -> Push Pause
 # [Game, Pause] -> Pop
 # []
 class MainMenu(State):
     def handle_event(self, event) -> Transition:
-        pos = (270, 810), (100, 200)
+        pos = (270, 810), (200, 300)
         self.onbut = False
         if event.type == pygame.MOUSEMOTION:
             x2, y2 = event.pos
@@ -93,12 +107,19 @@ class MainMenu(State):
 
     def update(self) -> Transition:
         Renderer.clear_screen(0xffffff)
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), [0, 0])
         if not self.onbut:
-            pygame.draw.rect(pygame.display.get_surface(), (255, 0, 0), ((270, 100), (540, 100)))
+            pygame.display.get_surface().blit(Loader.get_image("Play_btn.png"), [270, 200])
         else:
-            pygame.draw.rect(pygame.display.get_surface(), (150, 0, 0), ((270, 100), (540, 100)))
-
+            pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("Play_btn.png"), (600, 120)), [240, 190])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/main_hero/chill.png"), (100, 100)), [490, 400])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [150, 100])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [80, 150])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [950, 120])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [830, 110])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [880, 180])
         return Trans.Pass
+
 
 
 class PauseState(State):
@@ -112,8 +133,14 @@ class PauseState(State):
         return Trans.Pass
 
     def update(self) -> Transition:
-        Renderer.clear_screen(0x000000)
 
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), [0, 0])
+        Renderer.clear_screen((235, 215, 160))
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/main_hero/chill.png"), (90, 90)), [495, 315])
+
+        f = pygame.font.SysFont('Impact', 70)
+        text = f.render("Pause", 1, (165, 115, 100))
+        pygame.display.get_surface().blit(text, [450, 100])
         return Trans.Pass
 
 
@@ -151,20 +178,35 @@ class GameState(State):
         self.on_facade = False
         self.tree_fall = False
         self.inventory_is_open = False
+        self.dialog_is_open = False
         self.anim = 0
         self.count = 0
+        self.wood = 0
         self.broken = 0
+        self.quest = 1
+        self.dir = 3
         self.types_of_houses = {2: "inn", 3: "house"}
         self.types_of_rooms = {}
-        self.types_of_furniture = {1: "chest", 2: "bed"}
+        self.types_of_furniture = {1: "chest", 2: "bed", 3: "chair", 4: "table"}
         self.trees = {}
+        self.buttons = {}
         self.entities = []
         self.building = []
         self.furniture = []
+        self.talking_areas = []
         self.player = Player()
         self.inventory = Inventory()
+        self.dialog = Dialog()
+        self.npc_icon = NPC("woodcutter.png", 165, 473)
         self.ax_icon = Tool("ax.png")
+        self.wood_icon = Player()
+        self.cancel_btn = Button("cancel")
+        self.accept_btn = Button("accept")
+        self.wood_icon.image = pygame.transform.scale(Loader.get_image("data/trees/wood.png"), (60, 50))
         self.ax_icon.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][0], (60, 70))
+
+
+
         self.tool = Tool("ax.png")
         self.ground = Ground(0, 0)
         self.pos = pygame.Vector2()
@@ -185,9 +227,19 @@ class GameState(State):
                     self.building.append(Houses(self.types_of_houses[i], x, y))
 
     def handle_event(self, event) -> Transition:
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.dialog_is_open:
+                pos = Input.mouse_position - Renderer.cameraTranslation
+                if self.cancel_btn.rect.collidepoint(pos):
+                    self.dialog_is_open = False
+                if self.accept_btn.rect.collidepoint(pos):
+                    if self.quest == 1:
+                        self.inventory.add_object(self.ax_icon)
+                    self.quest += 1
+                    self.dialog_is_open = False
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_e:
-                if self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation):
+                if self.player.check(self.doors, self.player.pos + Renderer.cameraTranslation):
                     self.coord_of_house = self.player.check(self.doors, (
                     self.player.x, self.player.y) + Renderer.cameraTranslation).rect.topleft
                     if not self.in_home:
@@ -196,6 +248,10 @@ class GameState(State):
                         self.premises = self.types_of_rooms[self.player.check(self.doors, (self.player.x, self.player.y) + Renderer.cameraTranslation)]
                     else:
                         self.in_home = False
+                if self.player.check(self.talking_areas, self.player.pos + Renderer.cameraTranslation):
+                    print(self.talking_areas)
+                    self.dialog_is_open = True
+
             if event.key == pygame.K_TAB:
                 if not self.inventory_is_open:
                     self.inventory_is_open = True
@@ -204,6 +260,14 @@ class GameState(State):
 
             if event.key == pygame.K_ESCAPE:
                 return Trans.Push(PauseState())
+        # pos = Input.mouse_position
+        # if self.player.check(self.inventory.cells, pos):
+        #     if self.inventory_is_open:
+        #         print('asd')
+        #         if self.inventory.inventory[self.player.check(self.inventory.cells, pos).rect.topleft] != 0:
+        #             self.inventory.inventory[self.player.check(self.inventory.cells, pos).rect.topleft].image = \
+        #                 pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][0], (60, 100))
+        #             print('asdasdasdasd')
 
         if event.type == pygame.QUIT:
             return Trans.Quit
@@ -226,31 +290,35 @@ class GameState(State):
                     self.furniture.append(Interior("chest.png", (50, 50), a, b))
                 elif i == 2:
                     self.furniture.append(Interior("bed.png", (100, 160), a, b))
+                elif i == 3:
+                    self.furniture.append(Interior("chair.png", (50, 50), a, b))
+                elif i == 4:
+                    self.furniture.append(Interior("table.png", (150, 100), a, b))
         for f in self.furniture:
             Renderer.submit(f)
         Renderer.submit(self.player)
 
     def move(self):
         if Input.is_key_held(pygame.K_SPACE):
-            if self.player.check(self.cutting, self.player.pos + Renderer.cameraTranslation):
-                coord = self.player.check(self.cutting, (
-                    self.player.pos) + Renderer.cameraTranslation).rect.topleft - Renderer.cameraTranslation
-                coord = (round(coord[0], -1), round(coord[1], -1))
-                if self.player.x + Renderer.cameraTranslation[0] >= self.player.check(self.cutting, (self.player.x, self.player.y) + Renderer.cameraTranslation).rect.center[0] - 50:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[1][self.count // 20], (60, 70))
-                    self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][1], (100, 100))
-                    self.tool.pos = self.player.pos[0], self.player.pos[1] + 65 - (self.count // 20) * 50
-                else:
-                    self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][self.count // 20], (60, 70))
-                    self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][1], (100, 100))
-                    self.tool.pos = self.player.pos[0] + 35, self.player.pos[1] + 15 + (self.count // 20) * 50
-                if self.count == 39 and self.trees[coord][1] != 20:
-                    n = self.trees[coord][2]
-                    self.trees[coord] = (self.trees[coord][0], self.trees[coord][1] - 20, self.trees[coord][2])
-                    self.trees[coord][0].image = pygame.transform.scale(self.do_some_cut(4, 1, "data/trees/tree" + n + ".png")[0][::-1][self.trees[coord][1] // 25 - 1], (100, 400))
-                    if self.trees[coord][1] == 20:
-                        print(self.trees[coord][2])
-                        self.tree_fall = self.trees[coord][0], int(self.trees[coord][2]) - 1
+            if self.quest != 1:
+                if self.player.check(self.cutting, self.player.pos + Renderer.cameraTranslation):
+                    coord = self.player.check(self.cutting, (
+                        self.player.pos) + Renderer.cameraTranslation).rect.topleft - Renderer.cameraTranslation
+                    coord = (round(coord[0], -1), round(coord[1], -1))
+                    if self.player.x + Renderer.cameraTranslation[0] >= self.player.check(self.cutting, (self.player.x, self.player.y) + Renderer.cameraTranslation).rect.center[0] - 50:
+                        self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[1][self.count // 20], (60, 70))
+                        self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][1], (100, 100))
+                        self.tool.pos = self.player.pos[0], self.player.pos[1] + 65 - (self.count // 20) * 50
+                    else:
+                        self.tool.image = pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][self.count // 20], (60, 70))
+                        self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][1], (100, 100))
+                        self.tool.pos = self.player.pos[0] + 35, self.player.pos[1] + 15 + (self.count // 20) * 50
+                    if self.count == 39 and self.trees[coord][1] != 20:
+                        n = self.trees[coord][2]
+                        self.trees[coord] = (self.trees[coord][0], self.trees[coord][1] - 20, self.trees[coord][2])
+                        self.trees[coord][0].image = pygame.transform.scale(self.do_some_cut(4, 1, "data/trees/tree" + n + ".png")[0][::-1][self.trees[coord][1] // 25 - 1], (100, 400))
+                        if self.trees[coord][1] == 20:
+                            self.tree_fall = self.trees[coord][0], int(self.trees[coord][2]) - 1
         else:
             if Input.is_key_held(pygame.K_a):
                 self.player.x -= 5
@@ -258,29 +326,32 @@ class GameState(State):
                         self.player.x < 0:
                     self.player.x += 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[0][self.count // 10], (100, 100))
+                self.dir = 0
             if Input.is_key_held(pygame.K_d):
                 self.player.x += 5
                 if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.x > 1900:
                     self.player.x -= 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[1][self.count // 10], (100, 100))
+                self.dir = 1
             if Input.is_key_held(pygame.K_w):
                 self.player.y -= 5
                 if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.y < 0:
                     self.player.y += 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[2][self.count // 10], (100, 100))
+                self.dir = 2
             if Input.is_key_held(pygame.K_s):
                 self.player.y += 5
                 if self.player.check(self.platforms, self.player.pos + Renderer.cameraTranslation) or \
                         self.player.y > 1900:
                     self.player.y -= 5
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][self.count // 10], (100, 100))
+                self.dir = 3
 
         self.count += 1
         if self.count == 40:
             self.count = 0
-
 
     def create_map(self):
         for i in self.coords:
@@ -302,6 +373,10 @@ class GameState(State):
                         cut = Cutting(x, y)
                         self.cutting.append(cut)
                         self.posit.append(((x, y), 'cut'))
+                    elif i == 4:
+                        t = Talking_area(x - 50, y - 50)
+                        self.talking_areas.append(t)
+                        self.posit.append(((x - 50, y - 50), 'dialog'))
                     pf = Platform(x, y, i)
                     self.platforms.append(pf)
                     self.posit.append(((x, y), i))
@@ -330,13 +405,14 @@ class GameState(State):
         self.posit.append(((x + 175, y + 360), 'door'))
 
     def update(self) -> Transition:
-
+        f = pygame.font.SysFont('Impact', 40)
+        self.talking_areas = []
         self.platforms = []
         self.cutting = []
         self.doors = []
         self.facade = []
         self.posit = []
-        self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][1], (100, 100))
+        self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[self.dir][1], (100, 100))
         self.tool.pos = (-420, 420)
         if self.tree_fall:
             self.anim += 1
@@ -346,12 +422,17 @@ class GameState(State):
                 self.tree_fall[0].image = pygame.transform.scale(Loader.get_image("data/trees/stump.png"), (100, 400))
                 self.anim = 0
                 self.tree_fall = False
+                self.inventory.add_object(self.wood_icon)
+                if self.quest == 2:
+                    self.wood += 1
+
 
         if not self.in_home:
             self.create_map()
         else:
             self.create_room(self.coord_of_house, self.premises)
-        self.move()
+        if not self.dialog_is_open:
+            self.move()
 
         if self.player.check(self.facade, self.player.pos + Renderer.cameraTranslation):
             self.on_facade = True
@@ -393,21 +474,64 @@ class GameState(State):
                     Renderer.submit(ent)
         Renderer.submit(self.tool)
         if self.inventory_is_open:
-            self.inventory.pos = self.player.pos - (440, 215)
-            self.inventory.pos = (50, 92) - Renderer.cameraTranslation
-            Renderer.submit(self.inventory)
-            for i in range(12):
-                self.ax_icon.pos = list(self.inventory.inventory)[i] - Renderer.cameraTranslation
-                # self.ax_icon.pos = self.player.pos - self.inventory.inventory[i] + (-80, 280)
-                Renderer.submit(self.ax_icon)
+            # self.inventory.pos = self.player.pos - (440, 215)
+            if self.pos.x < 490:
+                self.inventory.pos = 650, self.inventory.y
+            else:
+                self.inventory.pos = 50, self.inventory.y
+            Renderer.submit(self.inventory, False)
+            for i in self.inventory.inventory:
+                if self.inventory.inventory[i] != 0:
+                    pos = i
+                    if self.pos.x < 490:
+                        pos = pos[0] + 600, pos[1]
+                    self.inventory.inventory[i].pos = pos
+                    # self.inventory.inventory[i] = self.player.pos - self.inventory.inventory[i] + (-80, 280)
+                    Renderer.submit(self.inventory.inventory[i], False)
+        if self.dialog_is_open:
+            self.cancel_btn.pos = (800, 640)
+            self.cancel_btn.rect[0] = 800 - Renderer.cameraTranslation[0]
+            self.cancel_btn.rect[1] = 640 - Renderer.cameraTranslation[1]
+            self.accept_btn.pos = (650, 640)
+            self.accept_btn.rect[0] = 650 - Renderer.cameraTranslation[0]
+            self.accept_btn.rect[1] = 640 - Renderer.cameraTranslation[1]
 
+            self.npc_icon.image = Loader.get_image("data/DialogWindow/woodcutter_icon.png")
+            Renderer.submit(self.dialog, False)
+            Renderer.submit(self.npc_icon, False)
+            Renderer.submit(self.cancel_btn, False)
+
+            if self.quest == 1:
+                string = ["Oh, finally somebody who could ", "help an old man out! Chop some ", "wood for me, will ya?"]
+                for i in range(3):
+                    text = f.render(string[i], 1, (160, 135, 132))
+                    Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
+                Renderer.submit(self.accept_btn, False)
+            if self.quest == 2:
+                if self.wood < 3:
+                    text = f.render("Нou haven’t done anything yet.", 1, (160, 135, 132))
+                    Renderer.submit((text, [320, 480] - Renderer.cameraTranslation))
+                else:
+                    self.inventory.del_object(self.wood_icon)
+                    string = ["Thank you so much, young man.", "Take this axe as a reward."]
+                    for i in range(2):
+                        text = f.render(string[i], 1, (160, 135, 132))
+                        Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
+                    Renderer.submit(self.accept_btn, False)
+            if self.quest == 3:
+                string = ["I used to be an adventurer like you,", "but then..."]
+                for i in range(2):
+                    text = f.render(string[i], 1, (160, 135, 132))
+                    Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
+        if self.quest == 2:
+            text = f.render("Wood: " + str(self.wood) + "/3", 1, (170, 120, 104))
+            Renderer.submit((text, [100, 100] - Renderer.cameraTranslation))
 
         Renderer.present()
 
         # Renderer.check(self.posit)
 
         return Trans.Pass
-
 
 
 
