@@ -40,6 +40,7 @@ class Platform:
         if obj == 'table':
             self.rect = Rect(x + 20, y + 20, 100, 10)
 
+
 class Facade:
     def __init__(self, x, y):
         self.rect = Rect(x, y + 400, 500, 100)
@@ -63,3 +64,11 @@ class Cells:
 class Talking_area:
     def __init__(self, x, y):
         self.rect = Rect(x, y, 175, 200)
+
+
+class Btn:
+    def __init__(self, x, y, btn):
+        if btn == "Developer mode":
+            self.rect = Rect(x - 10, y, 280, 50)
+        if btn == "Exit":
+            self.rect = Rect(x - 10, y, 100, 50)

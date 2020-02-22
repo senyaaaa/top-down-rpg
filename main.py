@@ -1,11 +1,13 @@
 import pygame
 import random
+import json
 from framework.application import Application, Input
 from framework.loader import Loader
 from framework.renderer import Renderer, Entity
 from framework.states import State, Trans, Transition
 from framework.window import Window
-from framework.map import Map, Platform, Facade, Door, Cutting, Cells, Talking_area
+from framework.map import Map, Platform, Facade, Door, Cutting, Cells, Talking_area, Btn
+Developer_mode = False
 
 
 class Player(Entity):
@@ -85,7 +87,7 @@ class Button(Entity):
 
 
 # [Game] -> Push Pause
-# [Game, Pause] -> Pop
+# [Game, Pause] -> Popd
 # []
 class MainMenu(State):
     def handle_event(self, event) -> Transition:
@@ -118,15 +120,33 @@ class MainMenu(State):
         pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [950, 120])
         pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [830, 110])
         pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [880, 180])
+        f = pygame.font.SysFont('Impact', 30)
+        text = f.render("Enter the house/NPC interaction - E", 1, (255, 115, 100))
+        pygame.display.get_surface().blit(text, [330, 550])
+        text = f.render("Inventory - Tab", 1, (255, 115, 100))
+        pygame.display.get_surface().blit(text, [450, 590])
+        text = f.render("Сutting wood - SPACE", 1, (255, 115, 100))
+        pygame.display.get_surface().blit(text, [400, 630])
+        text = f.render("Pause - Esc", 1, (255, 115, 100))
+        pygame.display.get_surface().blit(text, [470, 670])
         return Trans.Pass
-
 
 
 class PauseState(State):
     def handle_event(self, event) -> Transition:
+        global Developer_mode
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_ESCAPE:
                 return Trans.Pop
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.btn:
+                if self.btn == "Exit":
+                    return Trans.Quit
+                if self.btn == "Developer Mode":
+                    if not Developer_mode:
+                        Developer_mode = True
+                    else:
+                        Developer_mode = False
 
         if event.type == pygame.QUIT:
             return Trans.Quit
@@ -141,6 +161,28 @@ class PauseState(State):
         f = pygame.font.SysFont('Impact', 70)
         text = f.render("Pause", 1, (165, 115, 100))
         pygame.display.get_surface().blit(text, [450, 100])
+
+        pos = Input.mouse_position
+        btn_developer_mode = Btn(700, 600, "Developer mode")
+        btn_exit = Btn(100, 600, "Exit")
+        if btn_developer_mode.rect.collidepoint(pos):
+            f = pygame.font.SysFont('Impact', 50)
+            text = f.render("Developer mode", 1, (165, 115, 100))
+            pygame.display.get_surface().blit(text, [680, 580])
+            self.btn = "Developer Mode"
+        else:
+            f = pygame.font.SysFont('Impact', 40)
+            text = f.render("Developer mode", 1, (165, 115, 100))
+            pygame.display.get_surface().blit(text, [700, 600])
+        if btn_exit.rect.collidepoint(pos):
+            f = pygame.font.SysFont('Impact', 50)
+            text = f.render("Exit", 1, (165, 115, 100))
+            pygame.display.get_surface().blit(text, [100, 580])
+            self.btn = "Exit"
+        else:
+            f = pygame.font.SysFont('Impact', 40)
+            text = f.render("Exit", 1, (165, 115, 100))
+            pygame.display.get_surface().blit(text, [100, 600])
         return Trans.Pass
 
 
@@ -174,6 +216,9 @@ class GameState(State):
         with open("map.csv", newline='') as csvfile:
             m = Map()
             self.coords = m.drawing(csvfile, 100)
+        with open("quests/quest.json", "r") as plot:
+            self.plot = json.load(plot)
+        self.devoloper_mode = False
         self.in_home = False
         self.on_facade = False
         self.tree_fall = False
@@ -211,7 +256,7 @@ class GameState(State):
         self.ground = Ground(0, 0)
         self.pos = pygame.Vector2()
         self.tool.pos = (1000, 500)
-        self.player.pos = (1000, 500)
+        self.player.pos = (500, 1600)
         for i in self.coords:
             for j in self.coords[i]:
                 x, y = j[0], j[1]
@@ -249,7 +294,6 @@ class GameState(State):
                     else:
                         self.in_home = False
                 if self.player.check(self.talking_areas, self.player.pos + Renderer.cameraTranslation):
-                    print(self.talking_areas)
                     self.dialog_is_open = True
 
             if event.key == pygame.K_TAB:
@@ -260,14 +304,6 @@ class GameState(State):
 
             if event.key == pygame.K_ESCAPE:
                 return Trans.Push(PauseState())
-        # pos = Input.mouse_position
-        # if self.player.check(self.inventory.cells, pos):
-        #     if self.inventory_is_open:
-        #         print('asd')
-        #         if self.inventory.inventory[self.player.check(self.inventory.cells, pos).rect.topleft] != 0:
-        #             self.inventory.inventory[self.player.check(self.inventory.cells, pos).rect.topleft].image = \
-        #                 pygame.transform.scale(self.do_some_cut(2, 2, "data/tool/ax.png")[0][0], (60, 100))
-        #             print('asdasdasdasd')
 
         if event.type == pygame.QUIT:
             return Trans.Quit
@@ -405,6 +441,7 @@ class GameState(State):
         self.posit.append(((x + 175, y + 360), 'door'))
 
     def update(self) -> Transition:
+        global Developer_mode
         f = pygame.font.SysFont('Impact', 40)
         self.talking_areas = []
         self.platforms = []
@@ -474,7 +511,6 @@ class GameState(State):
                     Renderer.submit(ent)
         Renderer.submit(self.tool)
         if self.inventory_is_open:
-            # self.inventory.pos = self.player.pos - (440, 215)
             if self.pos.x < 490:
                 self.inventory.pos = 650, self.inventory.y
             else:
@@ -486,9 +522,11 @@ class GameState(State):
                     if self.pos.x < 490:
                         pos = pos[0] + 600, pos[1]
                     self.inventory.inventory[i].pos = pos
-                    # self.inventory.inventory[i] = self.player.pos - self.inventory.inventory[i] + (-80, 280)
                     Renderer.submit(self.inventory.inventory[i], False)
         if self.dialog_is_open:
+            if self.wood >= 3 and self.quest == 2:
+                self.quest += 1
+                self.inventory.del_object(self.wood_icon)
             self.cancel_btn.pos = (800, 640)
             self.cancel_btn.rect[0] = 800 - Renderer.cameraTranslation[0]
             self.cancel_btn.rect[1] = 640 - Renderer.cameraTranslation[1]
@@ -500,36 +538,19 @@ class GameState(State):
             Renderer.submit(self.dialog, False)
             Renderer.submit(self.npc_icon, False)
             Renderer.submit(self.cancel_btn, False)
-
-            if self.quest == 1:
-                string = ["Oh, finally somebody who could ", "help an old man out! Chop some ", "wood for me, will ya?"]
-                for i in range(3):
-                    text = f.render(string[i], 1, (160, 135, 132))
-                    Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
+            if self.quest not in [2, 4]:
                 Renderer.submit(self.accept_btn, False)
-            if self.quest == 2:
-                if self.wood < 3:
-                    text = f.render("Нou haven’t done anything yet.", 1, (160, 135, 132))
-                    Renderer.submit((text, [320, 480] - Renderer.cameraTranslation))
-                else:
-                    self.inventory.del_object(self.wood_icon)
-                    string = ["Thank you so much, young man.", "Take this axe as a reward."]
-                    for i in range(2):
-                        text = f.render(string[i], 1, (160, 135, 132))
-                        Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
-                    Renderer.submit(self.accept_btn, False)
-            if self.quest == 3:
-                string = ["I used to be an adventurer like you,", "but then..."]
-                for i in range(2):
-                    text = f.render(string[i], 1, (160, 135, 132))
-                    Renderer.submit((text, [320, 480 + (i * 40)] - Renderer.cameraTranslation))
+            for i in self.plot["woodcutter"][str(self.quest)]:
+                plot = [self.plot["woodcutter"][i] for i in [j for j in list(self.plot["woodcutter"])]][self.quest - 1]
+                text = f.render(i, 1, (160, 135, 132))
+                Renderer.submit((text, [320, 480 + (plot.index(i) * 40)] - Renderer.cameraTranslation))
         if self.quest == 2:
-            text = f.render("Wood: " + str(self.wood) + "/3", 1, (170, 120, 104))
+            text = f.render("Wood: " + str(self.wood) + "/3", 1, (255, 120, 104))
             Renderer.submit((text, [100, 100] - Renderer.cameraTranslation))
 
         Renderer.present()
-
-        # Renderer.check(self.posit)
+        if Developer_mode:
+            Renderer.check(self.posit)
 
         return Trans.Pass
 
