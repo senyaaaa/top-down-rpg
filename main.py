@@ -34,7 +34,7 @@ class Houses(Entity):
 
 class Ground(Entity):
     def __init__(self, x, y):
-        super().__init__(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), pygame.Vector2(x, y))
+        super().__init__(pygame.transform.scale(Loader.get_image("data/grass.png"), (2000, 2000)), pygame.Vector2(x, y))
 
 
 class Interior(Entity):
@@ -109,17 +109,17 @@ class MainMenu(State):
 
     def update(self) -> Transition:
         Renderer.clear_screen(0xffffff)
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), [0, 0])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/grass.png"), (2000, 2000)), [0, 0])
         if not self.onbut:
-            pygame.display.get_surface().blit(Loader.get_image("Play_btn.png"), [270, 200])
+            pygame.display.get_surface().blit(Loader.get_image("data/Play_btn.png"), [270, 200])
         else:
-            pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("Play_btn.png"), (600, 120)), [240, 190])
+            pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/Play_btn.png"), (600, 120)), [240, 190])
         pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/main_hero/chill.png"), (100, 100)), [490, 400])
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [150, 100])
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [80, 150])
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [950, 120])
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [830, 110])
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("tree1.png"), (100, 400)), [880, 180])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/tree.png"), (100, 400)), [150, 100])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/tree.png"), (100, 400)), [80, 150])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/tree.png"), (100, 400)), [950, 120])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/tree.png"), (100, 400)), [830, 110])
+        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/tree.png"), (100, 400)), [880, 180])
         f = pygame.font.SysFont('Impact', 30)
         text = f.render("Enter the house/NPC interaction - E", 1, (255, 115, 100))
         pygame.display.get_surface().blit(text, [330, 550])
@@ -147,14 +147,13 @@ class PauseState(State):
                         Developer_mode = True
                     else:
                         Developer_mode = False
+                    return Trans.Pop
 
         if event.type == pygame.QUIT:
             return Trans.Quit
         return Trans.Pass
 
     def update(self) -> Transition:
-
-        pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("grass.png"), (2000, 2000)), [0, 0])
         Renderer.clear_screen((235, 215, 160))
         pygame.display.get_surface().blit(pygame.transform.scale(Loader.get_image("data/main_hero/chill.png"), (90, 90)), [495, 315])
 
@@ -213,7 +212,7 @@ class GameState(State):
         return returnedSurfaces
 
     def on_start(self):
-        with open("map.csv", newline='') as csvfile:
+        with open("maps/map.csv", newline='') as csvfile:
             m = Map()
             self.coords = m.drawing(csvfile, 100)
         with open("quests/quest.json", "r") as plot:
@@ -385,7 +384,7 @@ class GameState(State):
                 self.player.image = pygame.transform.scale(self.do_some_cut(4, 4, "data/main_hero/hero.png")[3][self.count // 10], (100, 100))
                 self.dir = 3
 
-        self.count += 1
+        self.count   += 1
         if self.count == 40:
             self.count = 0
 
@@ -419,7 +418,7 @@ class GameState(State):
 
     def create_room(self, coord, premises):
         x, y = coord[0] - 175, coord[1] - 210
-        with open(self.types_of_houses[premises] + ".csv", newline='') as csvfile:
+        with open("maps/" + self.types_of_houses[premises] + ".csv", newline='') as csvfile:
             m = Map()
             self.interior = m.drawing(csvfile, 50)
             for i in sorted(self.interior, reverse=True):

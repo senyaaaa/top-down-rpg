@@ -1,0 +1,5 @@
+{"woodcutter": {"1": ["Oh, finally somebody who could", "help an old man out! Chop some", "wood for me, will ya?"], 
+		"2": ["You haven’t done anything yet."], 
+		"3": ["Thank you so much, young man.", "Take this axe as a reward."],
+		"4": ["I used to be an adventurer like you,", "but then..."]}, 
+"somebody": {"1": "something"}}
